@@ -489,7 +489,7 @@ def walktrapNonPregel(G, t, add_self_edges=True, verbose=False):
 def importBitcoinAlpha():
     file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinalpha.csv"), 'r')
     reader = csv.reader(file1)
-    data = [(x[0], x[1]) for x in list(reader)]
+    data = [(int(x[0]), int(x[1])) for x in list(reader)]
     G = nx.Graph()
     G.add_edges_from(data)
     return G
@@ -498,7 +498,7 @@ def importBitcoinAlpha():
 def importBitcoinOtc():
     file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinotc.csv"), 'r')
     reader = csv.reader(file1)
-    data = [(x[0], x[1]) for x in list(reader)]
+    data = [(int(x[0]), int(x[1])) for x in list(reader)]
     G = nx.Graph()
     G.add_edges_from(data)
     return G
