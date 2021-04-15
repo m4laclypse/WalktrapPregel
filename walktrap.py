@@ -486,25 +486,20 @@ def walktrapNonPregel(G, t, add_self_edges=True, verbose=False):
     return np.array(partitions), communities, np.array(delta_sigmas), np.array(modularities)
 
 
-def importWiki():
-    file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "Wiki-Vote.txt"), 'r')
-    Lines = file1.readlines()
-    edges = []
-    for line in Lines:
-        if line[0] != "#":
-            edge = line.split("	")
-            edge[1].replace("\n", "")
-            edge = (int(edge[0]), int(edge[1]))
-            edges.append(edge)
+def importBitcoinAlpha():
+    file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinalpha.csv"), 'r')
+    reader = csv.reader(file1)
+    data = [(x[0], x[1]) for x in list(reader)]
+    print(data)
     G = nx.Graph()
-    G.add_edges_from(edges)
+    G.add_edges_from(data)
     return G
 
 
-def importGit():
-    file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "musae_git_edges.csv"), 'r')
+def importBitcoinOtc():
+    file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinotc.csv"), 'r')
     reader = csv.reader(file1)
-    data = list(reader)[1:]
+    data = [(x[0], x[1]) for x in list(reader)]
     G = nx.Graph()
     G.add_edges_from(data)
     return G
@@ -529,13 +524,13 @@ if __name__ == "__main__":
 
     print("\n \n")
 
-    print("Jeu de données Wiki")
-    G = importWiki()
+    print("Jeu de données BitcoinAlpha")
+    G = importBitcoinAlpha()
     pos = nx.spring_layout(G)
 
     t = time.time()
     coms, parts, Qs = walktrap(G, 600, 4)
-    print("Le set Wiki nous a demandé ", time.time() - t, " secondes")
+    print("Le set BitcoinAlpha nous a demandé ", time.time() - t, " secondes")
     coul = couleurs(coms, len(G.nodes))
     plt.figure(figsize=(11, 11))
     nx.draw(G, pos, node_color=coul)
@@ -543,17 +538,17 @@ if __name__ == "__main__":
 
     t = time.time()
     walktrapNonPregel(G, 4)
-    print("Le set Wiki a demandé sans Pregel ", time.time() - t, " secondes")
+    print("Le set BitcoinAlpha a demandé sans Pregel ", time.time() - t, " secondes")
 
     print("\n \n")
 
-    print("Jeu de données Git")
-    G = importGit()
+    print("Jeu de données BitcoinOTC")
+    G = importBitcoinOtc()
     pos = nx.spring_layout(G)
 
     t = time.time()
     coms, parts, Qs = walktrap(G, 600, 4)
-    print("Le set Git nous a demandé ", time.time() - t, " secondes")
+    print("Le set BitcoinOTC nous a demandé ", time.time() - t, " secondes")
     coul = couleurs(coms, len(G.nodes))
     plt.figure(figsize=(11, 11))
     nx.draw(G, pos, node_color=coul)
@@ -561,4 +556,4 @@ if __name__ == "__main__":
 
     t = time.time()
     walktrapNonPregel(G, 4)
-    print("Le set Git a demandé sans Pregel ", time.time() - t, " secondes")
+    print("Le set BitcoinOTC a demandé sans Pregel ", time.time() - t, " secondes")
