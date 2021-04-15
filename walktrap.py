@@ -489,7 +489,17 @@ def walktrapNonPregel(G, t, add_self_edges=True, verbose=False):
 def importBitcoinAlpha():
     file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinalpha.csv"), 'r')
     reader = csv.reader(file1)
-    data = [(int(x[0]), int(x[1])) for x in list(reader)]
+    dicNum = {}
+    compteur = 0
+    data = []
+    for x in list(reader):
+        if x[0] not in dicNum:
+            dicNum[x[0]] = compteur
+            compteur += 1
+        if x[1] not in dicNum:
+            dicNum[x[1]] = compteur
+            compteur += 1
+        data.append((dicNum[x[0]], dicNum[x[1]]))
     G = nx.Graph()
     G.add_edges_from(data)
     return G
@@ -498,7 +508,17 @@ def importBitcoinAlpha():
 def importBitcoinOtc():
     file1 = open(os.path.join(pathlib.Path(__file__).parent.absolute(), "soc-sign-bitcoinotc.csv"), 'r')
     reader = csv.reader(file1)
-    data = [(int(x[0]), int(x[1])) for x in list(reader)]
+    dicNum = {}
+    compteur = 0
+    data = []
+    for x in list(reader):
+        if x[0] not in dicNum:
+            dicNum[x[0]] = compteur
+            compteur += 1
+        if x[1] not in dicNum:
+            dicNum[x[1]] = compteur
+            compteur += 1
+        data.append((dicNum[x[0]], dicNum[x[1]]))
     G = nx.Graph()
     G.add_edges_from(data)
     return G
