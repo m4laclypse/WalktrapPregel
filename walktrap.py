@@ -330,7 +330,19 @@ def walktrap(G, t, tRW):
         else:
             dicCommunities[vertex.history[index]].append(vertex)
 
-    return dicCommunities, partition, modularities
+    allPartition = []
+    for timeMax in dateEvents:
+        tempPartition = set([])
+        for vertex in vertices:
+            try:
+                index = next(i for i, v in enumerate(vertex.events) if v > timeMax) - 1
+            except:
+                index = len(vertex.events) - 1
+            tempPartition.add(vertex.history[index])
+        allPartition.append(tempPartition)
+
+
+    return dicCommunities, partition, modularities, allPartition
 
 
 def couleurs(coms, N):
@@ -530,12 +542,18 @@ if __name__ == "__main__":
     pos = nx.spring_layout(G)
 
     t = time.time()
-    coms, parts, Qs = walktrap(G, 600, 4)
+    coms, parts, Qs, allParts = walktrap(G, 600, 4)
     print("Le set Karaté nous a demandé ", time.time() - t, " secondes")
     coul = couleurs(coms, len(G.nodes))
     plt.figure(figsize=(11, 11))
     nx.draw(G, pos, node_color=coul)
-    # plt.show()
+    plt.show()
+    plt.figure(figsize=(11, 11))
+    plt.plot(Qs)
+    plt.xlabel("Nombre de fusions")
+    plt.ylabel("Modularité globale")
+    plt.title("Evolution de la modularité selon le nombre de fusions")
+    plt.show()
 
     t = time.time()
     walktrapNonPregel(G, 4)
@@ -543,36 +561,24 @@ if __name__ == "__main__":
 
     print("\n \n")
 
-    print("Jeu de données BitcoinAlpha")
-    G = importBitcoinAlpha()
+    G = nx.fast_gnp_random_graph(1000, 0.05)
+    print("Noeuds et nodes : ", len(G.nodes), " ", len(G.edges))
     pos = nx.spring_layout(G)
 
     t = time.time()
-    coms, parts, Qs = walktrap(G, 600, 4)
-    print("Le set BitcoinAlpha nous a demandé ", time.time() - t, " secondes")
+    coms, parts, Qs, allParts = walktrap(G, 600, 4)
+    print("Le set Random Erdos Renyi nous a demandé ", time.time() - t, " secondes")
     coul = couleurs(coms, len(G.nodes))
     plt.figure(figsize=(11, 11))
     nx.draw(G, pos, node_color=coul)
-    # plt.show()
-
-    t = time.time()
-    walktrapNonPregel(G, 4)
-    print("Le set BitcoinAlpha a demandé sans Pregel ", time.time() - t, " secondes")
-
-    print("\n \n")
-
-    print("Jeu de données BitcoinOTC")
-    G = importBitcoinOtc()
-    pos = nx.spring_layout(G)
-
-    t = time.time()
-    coms, parts, Qs = walktrap(G, 600, 4)
-    print("Le set BitcoinOTC nous a demandé ", time.time() - t, " secondes")
-    coul = couleurs(coms, len(G.nodes))
+    plt.show()
     plt.figure(figsize=(11, 11))
-    nx.draw(G, pos, node_color=coul)
-    # plt.show()
+    plt.plot(Qs)
+    plt.xlabel("Nombre de fusions")
+    plt.ylabel("Modularité globale")
+    plt.title("Evolution de la modularité selon le nombre de fusions")
+    plt.show()
 
     t = time.time()
     walktrapNonPregel(G, 4)
-    print("Le set BitcoinOTC a demandé sans Pregel ", time.time() - t, " secondes")
+    print("Le set Random Erdos Renyi a demandé sans Pregel ", time.time() - t, " secondes")
