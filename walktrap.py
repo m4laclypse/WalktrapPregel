@@ -103,17 +103,13 @@ def walktrap(G, t, tRW):
 
                 types = [x[1][0] for x in self.incoming_messages]
 
-                 # if "initFusion" in types and self.sentFusion:
-                 #   numMessage = types.index("initFusion")
-                 #   out_message = list(self.incoming_messages[numMessage][1])
-                 #   out_message[0] = "fusion"
-                 #   out_message = tuple(out_message)
-                 #   self.outgoing_messages = [(vertex, out_message) for vertex in self.communityMembers] + [(self, out_message)]
-
                 if "fusion" in types:
+                    # Ici on a une fusion à effectuer
                     self.sentFusion = False
                     numMessage = types.index("fusion")
                     _, otherId, otherCommu, otherSize, otherP_c, otherInternal_weight, otherTotal_weight, otherVert, otherNeighbourCommu, deltaSigma, otherCommunityMembers, otherMinSigmaHeap, otherDefunct = self.incoming_messages[numMessage][1]
+                    
+                    # On commence par fusionner toutes les informations faciles à partager entre les deux commu
                     oldSize = self.size
                     oldCommu = self.community
                     self.defunctCommunities = self.defunctCommunities.union(otherDefunct)
@@ -141,11 +137,12 @@ def walktrap(G, t, tRW):
                     self.events.append(self.superstep)
                     self.modularities.append(self.modularity())
 
+                    # Maintenant, on va mettre à jour les distances avec les communautés voisines
                     self.outgoing_messages = []
                     deltaS = heappop(self.min_sigma_heap)[0]
                     for C_id in [x for x in self.neighbourCommu]:
                         if C_id.community != self.community:
-                            # If C is neighbour of both C1 and C2 then we can apply Theorem 4
+                            # Calcul de delta_sigma si double-voisin
                             if (C_id in [x for x in oldNeighbourCommu]) and (C_id in [x for x in otherNeighbourCommu]):
                                 infoC1C = oldNeighbourCommu[C_id]
                                 infoC2C = otherNeighbourCommu[C_id]
@@ -155,10 +152,11 @@ def walktrap(G, t, tRW):
                                 self.neighbourCommu[C_id] = (ds, self.community, C_id.community)
 
                                 delta_sigma = (ds, min(self.community, C_id.community), max(self.community, C_id.community))
+                                
+                                # On ajoute cette distance au tas des distances
                                 if delta_sigma not in self.min_sigma_heap:
                                     heappush(self.min_sigma_heap, delta_sigma)
-
-                            # Otherwise apply Theorem 3 to (C, C3)
+                            # Sinon si C_id est voisin d'une seule des deux communautés qui ont fusionné
                             else:
                                 ds = np.sum(np.square( np.matmul(Dx, C_id.P_c) - np.matmul(Dx, self.P_c) )) * C_id.size*self.size / ((C_id.size + self.size) * N)
 
@@ -166,11 +164,14 @@ def walktrap(G, t, tRW):
                                 self.neighbourCommu[C_id] = delta_sigma
                                 if delta_sigma not in self.min_sigma_heap:
                                     heappush(self.min_sigma_heap, delta_sigma)
-
+                            
+                            # On prévient les voisins de la nouvelle distance
                             self.outgoing_messages.append((C_id, ("synchroF", self.community, (ds, self.community, C_id.community), self.size, self.P_c)))
+                            # Et on prévient les voisins que les deux anciennes communautés sont maintenant caduques
                             self.outgoing_messages.append((C_id, ("defunct", oldCommu)))
                             self.outgoing_messages.append((C_id, ("defunct", otherCommu)))
 
+                    # On retire du tas toutes les paires qui contiennent une des deux communautés qui ont fusionné
                     for ds in self.min_sigma_heap:
                         if ds[1] == oldCommu or ds[2] == otherCommu:
                             self.min_sigma_heap.remove(ds)
@@ -178,12 +179,13 @@ def walktrap(G, t, tRW):
                         elif ds[1] == ds[2]:
                             self.min_sigma_heap.remove(ds)
                             self.minDeltaSigma = None       
-                    
+                    # Fin de la partie fusion
                 else:
                     self.outgoing_messages = []
                     hasSynchro = False
                     deltaSigmaChanged = False
 
+                    # On commence par regarder les annonces de communautés caduques
                     for (vertex, message) in [x for x in self.incoming_messages if x[1][0] == "defunct"]:
                         for ds in self.min_sigma_heap:
                             if ds[1] == message[1] or ds[2] == message[1]:
@@ -191,8 +193,9 @@ def walktrap(G, t, tRW):
                                 self.minDeltaSigma = None
                         self.defunctCommunities.add(message[1])
 
+                    # Puis on gère les synchronisation
                     for (vertex, message) in [x for x in self.incoming_messages if x[1][0][:7] == "synchro"]:
-                        if message[0] == "synchroF":
+                        if message[0] == "synchroF":  # synchroF => on doit renvoyer un message de synchronisation interne
                             ds = message[2]
                             if ds[1] in self.defunctCommunities:
                                 self.outgoing_messages.append((vertex, ("defunct", ds[1])))
@@ -206,7 +209,7 @@ def walktrap(G, t, tRW):
                                 for member in self.communityMembers:
                                     self.outgoing_messages.append((member, ("synchro", message[1], message[2], message[3], message[4])))
 
-                        if message[0] == "synchro":
+                        if message[0] == "synchro":  # synchro (sans F) => pas besoin de propager la synchronisation
                             ds = message[2]
                             if ds[1] in self.defunctCommunities:
                                 self.outgoing_messages.append((vertex, ("defunct", ds[1])))
@@ -217,6 +220,7 @@ def walktrap(G, t, tRW):
                                     heappush(self.min_sigma_heap, ds)
                                     hasSynchro = True
 
+                    # Ici les Delta, càd les partages d'informations sur quelles sont les communautés les plus proches
                     for (vertex, message) in [x for x in self.incoming_messages if x[1][0] == "delta"]:
                         ds = message[2]
                         if ds[1] in self.defunctCommunities:
@@ -227,10 +231,12 @@ def walktrap(G, t, tRW):
                             if ds not in self.min_sigma_heap:
                                 heappush(self.min_sigma_heap, ds)
                     
+                    # Si on a reçu l'ordre d'attendre une étape
                     for (vertex, message) in [x for x in self.incoming_messages if x[1][0] == "hold"]:
                         deltaSigmaChanged = True
                         hasSynchro = True
                     
+                    # Si notre tas des distances n'est pas vide, on met à jour quelles sont les communautés les plus proches
                     if self.min_sigma_heap != []:
                         try:
                             newMin = min(self.minDeltaSigma, self.min_sigma_heap[0])
@@ -248,12 +254,17 @@ def walktrap(G, t, tRW):
                     if deltaSigmaChanged or hasSynchro:
                         self.outgoing_messages += [(vertex, "hold") for vertex in self.communityMembers]
                         
+                    # Les modulos nous permettent de gérer le système en 4 temps, afin que tous les nœuds soient sur la même longueur d'onde
+                    # Ici on partage les delta
                     if self.superstep % 5 == 0 and self.min_sigma_heap != []:
                         self.outgoing_messages += [(vertex, ("delta", self.community, self.minDeltaSigma, self.communityMembers)) for vertex in set(self.out_vertices + list(self.communityMembers))]
                     
+                    # Ici on synchronise les informations en interne de la communauté
                     if self.superstep % 5 == 1 and deltaSigmaChanged and self.min_sigma_heap != []:
                         self.outgoing_messages += [(vertex, ("synchro", self.community, self.minDeltaSigma, self.communityMembers)) for vertex in set(self.out_vertices + list(self.communityMembers))]
                     
+                    # Si on a pas eu de changement récemment, on suppose que la paire de commu les plus proches est stable
+                    # Si on est une de ces deux commu les plus proches, on engage donc une fusion en envoyant un message
                     if self.min_sigma_heap != [] and not hasSynchro and self.superstep % 10 == 8 and self.community in self.minDeltaSigma[1:]:
                         if str(self.minDeltaSigma[1]) == str(self.community):
                             otherCommu = str(self.minDeltaSigma[2])
@@ -278,6 +289,7 @@ def walktrap(G, t, tRW):
     for vertex in vertices:
         vertex.allVertices = vertices
 
+    # On génère les nœuds
     for i in range(N):
         A_i = A[i]
         for j in range(N):
@@ -291,15 +303,16 @@ def walktrap(G, t, tRW):
                         heappush(vertices[i].min_sigma_heap, delta_sigma)
                     vertices[i].neighbourCommu[vertices[j]] = delta_sigma
     
-    
     p = Pregel(vertices, 8)
     p.run()
 
+    # date des fusions, nécessaire pour extraire les informations dans l'ordre
     dateEvents = []
     for vertex in vertices:
         dateEvents += vertex.events
     dateEvents = sorted(list(set(dateEvents)))
 
+    # tableau donnant la modularité à chaque nouvelle fusion
     modularities = []
     for event in dateEvents:
         temp = 0
@@ -313,12 +326,12 @@ def walktrap(G, t, tRW):
         modularities.append(temp)
 
     print("Date des fusions : ", dateEvents)
-    Qmax_index = np.argmax(modularities)
+    Qmax_index = np.argmax(modularities)  # Moment où la modularité est maximale
     print("On a un Q maximal après la fusion numéro : ", Qmax_index, " sur un total de ", len(dateEvents))
     timeMax = dateEvents[Qmax_index]
 
-    partition = set([])
-    dicCommunities = {}
+    partition = set([])  # Partition (ensemble des communautés) au moment où la modularité est maximale
+    dicCommunities = {}  # Donne les nœuds dans chaque communauté
     for vertex in vertices:
         try:
             index = next(i for i, v in enumerate(vertex.events) if v > timeMax) - 1
@@ -330,7 +343,7 @@ def walktrap(G, t, tRW):
         else:
             dicCommunities[vertex.history[index]].append(vertex)
 
-    allPartition = []
+    allPartition = []  # Liste de toutes les partitions à chaque nouvelle fusion
     for timeMax in dateEvents:
         tempPartition = set([])
         for vertex in vertices:
